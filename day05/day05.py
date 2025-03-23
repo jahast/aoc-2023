@@ -1,6 +1,6 @@
 import re
 import functools
-import itertools
+import sys
 
 with open("input.txt", "r") as f:
     raw = f.readlines()
@@ -27,7 +27,7 @@ for seed in seeds:
     for map in maps:
         for submap in map:
             delta = cur - submap[1]
-            if delta >= 0 and delta <= submap[2]:
+            if delta >= 0 and delta <= (submap[2] - 1):
                 cur = submap[0] + delta
                 break
     
@@ -37,44 +37,60 @@ ans1 = min(mapped)
 
 print(ans1)
 
-# (range_start, range_end, delta)
-ranges = []
+breakpoints = []
+for map in maps[::-1]:
+    new_breakpoints = []
+
+    for submap in map:
+        new_breakpoints.append(submap[1] - 1)
+        new_breakpoints.append(submap[1])
+        new_breakpoints.append(submap[1] + 1)
+
+        new_breakpoints.append(submap[1] + submap[2] - 1)
+        new_breakpoints.append(submap[1] + submap[2])
+        new_breakpoints.append(submap[1] + submap[2] + 1)
+
+    for breakpoint in breakpoints:
+        for submap in map:
+            delta = breakpoint - submap[0]
+            if delta >= 0 and delta <= (submap[2] - 1):
+                new_breakpoints.append(submap[1] + delta - 1)
+                new_breakpoints.append(submap[1] + delta)
+                new_breakpoints.append(submap[1] + delta + 1)
+                break
+        else:
+            new_breakpoints.append(breakpoint - 1)
+            new_breakpoints.append(breakpoint)
+            new_breakpoints.append(breakpoint + 1)
+
+    breakpoints = new_breakpoints
+
+limits = []
 for i in range(0, len(seeds), 2):
-    ranges.append(seeds[i], seeds[i+1], 0)
+    breakpoints.append(seeds[i])
+    breakpoints.append(seeds[i] + 1)
+    breakpoints.append(seeds[i] + seeds[i+1] - 1)
+    breakpoints.append(seeds[i] + seeds[i+1] - 2)
+    limits.append((seeds[i],seeds[i] + seeds[i+1] - 1))
 
+seeds_to_try = []
+for breakpoint in breakpoints:
+    for limit in limits:
+        if limit[0] <= breakpoint <= limit[1]:
+            seeds_to_try.append(breakpoint)
+            break
 
-from_start_to_end = [mapped[i] for i in range(0, len(seeds), 2)]
+ans2 = sys.maxsize
+for seed in seeds_to_try:
+    cur = seed
 
-for i in range(len(maps) - 1, -1, -1):
-    for submap in maps[i]:
-        candidates = [submap[0] - 1, submap[0], submap[0] + submap[2] - 1]
+    for map in maps:
+        for submap in map:
+            delta = cur - submap[1]
+            if delta >= 0 and delta <= (submap[2] - 1):
+                cur = submap[0] + delta
+                break
+    
+    ans2 = min(cur, ans2)
 
-
-
-# for map in maps:
-#     new_ranges = []
-#     for range in ranges:
-#         mapped_range_start, mapped_range_end = range[0] + range[2] - 1, range[1] + range[2] - 1
-#         for submap in map:
-#             submap_range_start, submap_range_end = submap[1], submap[1] + submap[2] - 1
-#             submap_delta = submap[0] - submap[1]
-
-#             start_delta = mapped_range_start - submap_range_start
-#             end_delta = mapped_range_end - submap_range_end
-
-#             # no overlap
-#             if start_delta < 0 and 0 < end_delta:
-#                 continue
-#             # range is included in submap
-#             elif start_delta > 0 and 0 < end_delta:
-#                 new_ranges.append(range[0], range[0] + start_delta - 1, range[2])
-#                 new_ranges.append(range[0] + start_delta, range[0] + start_delta + submap[2] - 1, range[2] + submap_delta)
-#                 new_ranges.append(range[0] + start_delta + submap[2], range[1], range[2])
-#                 continue
-#             elif start_delta > 0 and 0 > end_delta:
-#                 new_ranges.append(range[0], range[0] + start_delta - 1, range[2])
-#                 new_ranges.append(range[0] + start_delta, range[1], range[2] + submap_delta)
-#                 continue
-#             elif start_delta < 0 and 0 > end_delta:
-#                 new_ranges.append(range[0], range[0] + start_delta - 1, range[2])
-#                 continue
+print(ans2)
